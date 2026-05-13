@@ -1,0 +1,615 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bluesky Local Feed Lab</title>
+    <style>
+      :root {
+        --bg: #fff;
+        --fg: #0f1419;
+        --muted: #536471;
+        --border: #e1e8ed;
+        --accent: #1d9bf0;
+        --accent-hover: #1a8cd8;
+        --badge-bg: #eff3f4;
+        --badge-fg: #536471;
+        --net-in: #00ba7c;
+        --net-oon: #f4212e;
+        --shadow: 0 1px 3px rgba(0,0,0,0.06);
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #f7f9fa;
+        color: var(--fg);
+        margin: 0;
+        padding: 0;
+      }
+      .container { max-width: 680px; margin: 0 auto; padding: 16px; }
+      header {
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        padding: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(8px);
+        background: rgba(255,255,255,0.9);
+      }
+      header h2 { margin: 0 0 12px; font-size: 18px; }
+      .form-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .form-row input, .form-row button {
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        outline: none;
+      }
+      .form-row input[name="handle"] { flex: 1 1 220px; }
+      .form-row input[name="limit"] { width: 70px; text-align: center; }
+      .form-row button {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .form-row button:hover { background: var(--accent-hover); }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 16px 0 8px;
+      }
+      .toolbar .count {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .toolbar .count b { color: var(--fg); }
+      .refresh-form { display: inline; }
+      .refresh-form button {
+        background: var(--bg);
+        color: var(--accent);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .refresh-form button:hover { border-color: var(--accent); }
+      .error {
+        background: #ffebeb;
+        color: #a00;
+        padding: 10px 14px;
+        border-radius: 10px;
+        margin: 10px 0;
+        font-size: 13px;
+      }
+      .post {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+        opacity: 1;
+        transition: opacity 0.2s;
+      }
+      .post.repeat { border-color: #ffd700; }
+      .post-layout { display: flex; gap: 12px; }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #ddd;
+      }
+      .post-body { flex: 1; min-width: 0; }
+      .post-header {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .display-name {
+        font-weight: 700;
+        color: var(--fg);
+      }
+      .handle, .dot, .time {
+        color: var(--muted);
+      }
+      .time { white-space: nowrap; }
+      .badges { display: inline-flex; gap: 6px; margin-left: auto; align-items: center; }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: var(--badge-bg);
+        color: var(--badge-fg);
+        font-weight: 600;
+      }
+      .badge.net-in { background: #e0f5ed; color: #006b3f; }
+      .badge.net-oon { background: #ffebeb; color: #a00; }
+      .badge.score { background: #eef6ff; color: var(--accent); }
+      .badge.liked-author { background: #fff3cd; color: #856404; }
+      .badge.repeat { background: #ffebeb; color: #a00; }
+      .post-text {
+        font-size: 15px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        margin-bottom: 10px;
+      }
+      .embed { margin-bottom: 10px; }
+      .image-grid {
+        display: grid;
+        gap: 4px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 6px;
+      }
+      .image-grid img {
+        width: 100%;
+        height: auto;
+        max-height: 360px;
+        object-fit: cover;
+        display: block;
+      }
+      .image-grid.count-2 { grid-template-columns: 1fr 1fr; }
+      .image-grid.count-3 { grid-template-columns: 1fr 1fr; }
+      .image-grid.count-3 img:first-child { grid-column: 1 / -1; }
+      .image-grid.count-4 { grid-template-columns: 1fr 1fr; }
+      .external-card {
+        display: flex;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+        margin-top: 6px;
+      }
+      .external-card img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+      .external-card .info {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .external-card .title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+      .external-card .desc { font-size: 13px; color: var(--muted); }
+      .external-card .uri { font-size: 12px; color: var(--muted); margin-top: 4px; }
+      .quote-post {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-top: 6px;
+        background: #f7f9fa;
+      }
+      .quote-post .q-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      .quote-post .q-header img {
+        width: 18px; height: 18px; border-radius: 50%; object-fit: cover;
+      }
+      .quote-post .q-text { font-size: 14px; color: var(--fg); }
+      .post-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 6px;
+      }
+      .likes {
+        font-size: 13px;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .likes svg { width: 15px; height: 15px; fill: #f4212e; }
+      .menu { position: relative; }
+      .menu summary {
+        list-style: none;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--muted);
+        padding: 4px 8px;
+        border-radius: 50%;
+      }
+      .menu summary:hover { background: #eff3f4; }
+      .menu summary::-webkit-details-marker { display: none; }
+      .menu-dropdown {
+        position: absolute;
+        right: 0;
+        top: 28px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        min-width: 180px;
+        z-index: 5;
+        overflow: hidden;
+      }
+      .menu-dropdown button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 10px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--fg);
+      }
+      .menu-dropdown button:hover { background: #f7f9fa; }
+      .menu-dropdown button.positive { color: #00ba7c; }
+      .menu-dropdown button.negative { color: #f4212e; }
+      .pref-panel {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        font-size: 13px;
+      }
+      .pref-panel h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+      .pref-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+      .pref-tag {
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .pref-tag.pos { background: #e0f5ed; color: #006b3f; }
+      .pref-tag.neg { background: #ffebeb; color: #a00; }
+      .liked-authors-panel {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        font-size: 13px;
+      }
+      .liked-authors-panel h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .liked-author-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .liked-author-tag {
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #fff3cd;
+        color: #856404;
+      }
+      .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+      /* Debug panel styles */
+      .debug-toggle {
+        font-size: 12px;
+        color: var(--accent);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 0;
+        margin-top: 6px;
+      }
+      .debug-toggle:hover { text-decoration: underline; }
+      .debug-panel {
+        background: #f7f9fa;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+      .debug-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 16px;
+      }
+      .debug-section { margin-bottom: 8px; }
+      .debug-section:last-child { margin-bottom: 0; }
+      .debug-section h5 {
+        margin: 0 0 4px;
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .debug-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 1px 0;
+      }
+      .debug-row .label { color: var(--muted); }
+      .debug-row .value { font-weight: 600; color: var(--fg); }
+      .debug-row .value.pos { color: #00ba7c; }
+      .debug-row .value.neg { color: #f4212e; }
+      .mode-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #fff3cd;
+        color: #856404;
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <h2>
+          Bluesky Local Feed Lab
+          {% if local_mode %}<span class="mode-badge">Local Mode</span>{% endif %}
+        </h2>
+        <form method="post" action="/feed" class="form-row">
+          <input name="handle" placeholder="user handle (e.g. alice.bsky.social)" value="{{ handle }}" style="flex:1" required />
+          <input name="limit" type="number" min="1" max="100" value="{{ limit or 30 }}" />
+          <button type="submit">Render Feed</button>
+        </form>
+      </div>
+    </header>
+
+    <div class="container">
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+
+      {% if posts %}
+        <div class="toolbar">
+          <div class="count">
+            <b>{{ posts|length }}</b> posts for <b>@{{ handle }}</b>
+            {% if fresh_count is not none %} · {{ fresh_count }} fresh{% endif %}
+            {% if pool_age %} · pool {{ pool_age }} ago{% endif %}
+            {% if api_calls is not none %} · {{ api_calls }} API calls{% endif %}
+          </div>
+          <form method="post" action="/feed" class="refresh-form">
+            <input type="hidden" name="handle" value="{{ handle }}" />
+            <input type="hidden" name="limit" value="{{ limit or 30 }}" />
+            <input type="hidden" name="refresh" value="1" />
+            <button type="submit">↻ Refresh feed</button>
+          </form>
+        </div>
+
+        {% if liked_authors %}
+          <div class="liked-authors-panel">
+            <h4>🔥 Authors you like a lot</h4>
+            <div class="liked-author-list">
+              {% for did, count in liked_authors.items()|sort(true, 'value')|slice(8)|first %}
+                <span class="liked-author-tag">{{ count }} likes</span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if prefs and (prefs.topics or prefs.authors) %}
+          <div class="pref-panel">
+            <h4>Your topic adjustments</h4>
+            <div class="pref-tags">
+              {% for topic, weight in prefs.topics.items() %}
+                {% if weight != 0 %}
+                  <span class="pref-tag {{ 'pos' if weight > 0 else 'neg' }}">{{ topic }} {{ "+%.1f"|format(weight) if weight > 0 else "%.1f"|format(weight) }}</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% for p in posts %}
+          <div class="post {{ 'repeat' if p.is_repeat }}" id="post-{{ loop.index }}">
+            <div class="post-layout">
+              <img class="avatar" src="{{ p.author_avatar or 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' }}" alt="" />
+              <div class="post-body">
+                <div class="post-header">
+                  <span class="display-name">{{ p.author_display_name or p.author_handle }}</span>
+                  <span class="handle">@{{ p.author_handle }}</span>
+                  <span class="dot">·</span>
+                  <span class="time" title="{{ p.indexed_at }}">{{ p.indexed_at|relative_time }}</span>
+                  <div class="badges">
+                    {% if p.is_repeat %}<span class="badge repeat">↻ repeat</span>{% endif %}
+                    {% if p.liked_author_boost > 0 %}<span class="badge liked-author">🔥 liked author</span>{% endif %}
+                    <span class="badge score" title="Ranking score">{{ "%.2f"|format(p.score) }}</span>
+                    {% if p.in_network %}
+                      <span class="badge net-in">in-network</span>
+                    {% else %}
+                      <span class="badge net-oon">out-of-network</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="post-text">{{ p.text }}</div>
+
+                {% if p.embed %}
+                  <div class="embed">
+                    {% if p.embed.images %}
+                      <div class="image-grid count-{{ p.embed.images|length }}">
+                        {% for img in p.embed.images %}
+                          <img src="{{ img.thumb }}" alt="{{ img.alt or '' }}" loading="lazy" />
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+
+                    {% if p.embed.external %}
+                      <a class="external-card" href="{{ p.embed.external.uri }}" target="_blank" rel="noopener">
+                        {% if p.embed.external.thumb %}
+                          <img src="{{ p.embed.external.thumb }}" alt="" />
+                        {% endif %}
+                        <div class="info">
+                          <div class="title">{{ p.embed.external.title or 'Link' }}</div>
+                          {% if p.embed.external.description %}
+                            <div class="desc">{{ p.embed.external.description }}</div>
+                          {% endif %}
+                          <div class="uri">{{ p.embed.external.uri }}</div>
+                        </div>
+                      </a>
+                    {% endif %}
+
+                    {% if p.embed.quote %}
+                      <div class="quote-post">
+                        <div class="q-header">
+                          {% if p.embed.quote.author_avatar %}
+                            <img src="{{ p.embed.quote.author_avatar }}" alt="" />
+                          {% endif %}
+                          <span><b>{{ p.embed.quote.author_display_name or p.embed.quote.author_handle }}</b></span>
+                          <span class="handle">@{{ p.embed.quote.author_handle }}</span>
+                        </div>
+                        <div class="q-text">{{ p.embed.quote.text }}</div>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="post-footer">
+                  <span class="likes">
+                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    {{ p.like_count }}
+                  </span>
+
+                  <details class="menu">
+                    <summary>⋯</summary>
+                    <div class="menu-dropdown">
+                      <button class="positive"
+                        data-author="{{ p.author_handle }}"
+                        data-uri="{{ p.uri }}"
+                        data-text="{{ p.text }}"
+                        data-dir="1"
+                        onclick="vote(this)">Show more like this</button>
+                      <button class="negative"
+                        data-author="{{ p.author_handle }}"
+                        data-uri="{{ p.uri }}"
+                        data-text="{{ p.text }}"
+                        data-dir="-1"
+                        onclick="vote(this)">Show less like this</button>
+                    </div>
+                  </details>
+                </div>
+
+                {% if debug_ui and p.debug_info %}
+                  <details>
+                    <summary class="debug-toggle">🔍 Why this post?</summary>
+                    <div class="debug-panel">
+                      <div class="debug-grid">
+                        <div class="debug-section">
+                          <h5>Inputs</h5>
+                          {% for key, val in p.debug_info.inputs.items() %}
+                            <div class="debug-row">
+                              <span class="label">{{ key.replace('_', ' ') }}</span>
+                              <span class="value">{{ val }}</span>
+                            </div>
+                          {% endfor %}
+                        </div>
+                        <div class="debug-section">
+                          <h5>Score Breakdown</h5>
+                          {% for key, val in p.debug_info.score_breakdown.items() %}
+                            <div class="debug-row">
+                              <span class="label">{{ key.replace('_', ' ') }}</span>
+                              <span class="value">{{ val }}</span>
+                            </div>
+                          {% endfor %}
+                          {% if p.debug_info.preference_adjustment is defined %}
+                            <div class="debug-row">
+                              <span class="label">pref adjustment</span>
+                              <span class="value {{ 'pos' if p.debug_info.preference_adjustment > 0 else 'neg' }}">{{ "%+.2f"|format(p.debug_info.preference_adjustment) }}</span>
+                            </div>
+                          {% endif %}
+                          {% if p.debug_info.diversity_penalty is defined %}
+                            <div class="debug-row">
+                              <span class="label">diversity penalty</span>
+                              <span class="value">{{ "%.2f"|format(p.debug_info.diversity_penalty) }}</span>
+                            </div>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="debug-section" style="margin-top:8px">
+                        <h5>Probabilities</h5>
+                        <div class="debug-grid">
+                          {% for key, val in p.debug_info.probabilities.items() %}
+                            <div class="debug-row">
+                              <span class="label">{{ key }}</span>
+                              <span class="value">{{ "%.3f"|format(val) }}</span>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% elif handle %}
+        <div class="empty">No posts found for <b>@{{ handle }}</b>. Try another handle or adjust your filters.</div>
+      {% endif %}
+    </div>
+
+    <script>
+      async function vote(btn) {
+        const author = btn.dataset.author;
+        const uri = btn.dataset.uri;
+        const text = btn.dataset.text;
+        const dir = parseInt(btn.dataset.dir, 10);
+        const viewer = document.querySelector('input[name="handle"]').value;
+
+        btn.style.opacity = '0.5';
+        try {
+          const res = await fetch('/preference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              viewer_handle: viewer,
+              author_handle: author,
+              post_uri: uri,
+              post_text: text,
+              direction: String(dir)
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            btn.style.background = dir > 0 ? '#e0f5ed' : '#ffebeb';
+            setTimeout(() => { btn.style.background = ''; btn.style.opacity = '1'; }, 700);
+          } else {
+            alert('Error: ' + (data.error || 'unknown'));
+            btn.style.opacity = '1';
+          }
+        } catch (e) {
+          alert('Network error');
+          btn.style.opacity = '1';
+        }
+      }
+    </script>
+  </body>
+</html>
