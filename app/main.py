@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
     await client.close()
 
 
-app = FastAPI(title="Bluesky Local Feed Lab", lifespan=lifespan)
+app = FastAPI(title="Prism", lifespan=lifespan)
 
 
 @app.get("/", response_class=HTMLResponse)

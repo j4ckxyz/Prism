@@ -1,4 +1,4 @@
-# Bluesky Local Feed Lab
+# Prism
 
 A port of X/Twitter's "For You" algorithm to Bluesky, built as a local webapp for experimenting with personalized feed ranking. This project adapts the scoring framework from [xai-org/x-algorithm](https://github.com/xai-org/x-algorithm) to work with Bluesky's AT Protocol and public AppView APIs.
 
@@ -8,7 +8,7 @@ A port of X/Twitter's "For You" algorithm to Bluesky, built as a local webapp fo
 
 ## What this is
 
-X's "For You" feed ranks posts by predicting a set of user actions (favorite, reply, repost, quote, click, dwell, follow author, not interested, block, mute, report) and weighting them. This project ports that same philosophy to Bluesky:
+X's "For You" feed ranks posts by predicting a set of user actions (favorite, reply, repost, quote, click, dwell, follow author, not interested, block, mute, report) and weighting them. Prism ports that same philosophy to Bluesky:
 
 1. **Candidate generation** — fetch posts from your follows (in-network) and their follows (out-of-network)
 2. **Embedding** — compute semantic similarity between your profile/recent posts and each candidate via Ollama
@@ -174,7 +174,7 @@ Set `LOCAL_MODE=true` in your environment to:
 ### Install
 
 ```bash
-cd bluesky-local-feed
+cd Prism
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
@@ -248,7 +248,7 @@ All tests mock the Bluesky client and Ollama embedder — no live credentials ne
 ## Project structure
 
 ```
-bluesky-local-feed/
+Prism/
 ├── app/
 │   ├── main.py           # FastAPI app + lifespan
 │   ├── feed_service.py   # Candidate pool building + freshness logic

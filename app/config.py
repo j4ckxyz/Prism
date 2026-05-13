@@ -34,7 +34,7 @@ class Settings:
     cache_ttl_likes_seconds: int = 60
     candidate_pool_ttl_seconds: int = 120
 
-    preference_store_path: str = "bluesky-local-feed/data/preferences.json"
+    preference_store_path: str = "prism/data/preferences.json"
     max_likes_fetch: int = 200
 
     # background pool warming
@@ -77,7 +77,7 @@ def load_settings() -> Settings:
         cache_ttl_author_feed_seconds=int(os.getenv("CACHE_TTL_AUTHOR_FEED_SECONDS", "20")),
         cache_ttl_likes_seconds=int(os.getenv("CACHE_TTL_LIKES_SECONDS", "60")),
         candidate_pool_ttl_seconds=int(os.getenv("CANDIDATE_POOL_TTL_SECONDS", "120")),
-        preference_store_path=os.getenv("PREFERENCE_STORE_PATH", "bluesky-local-feed/data/preferences.json"),
+        preference_store_path=os.getenv("PREFERENCE_STORE_PATH", "prism/data/preferences.json"),
         max_likes_fetch=int(os.getenv("MAX_LIKES_FETCH", "200")),
         background_refresh_interval_seconds=int(os.getenv("BACKGROUND_REFRESH_INTERVAL_SECONDS", "30")),
         max_concurrent_refreshes=int(os.getenv("MAX_CONCURRENT_REFRESHES", "3")),
